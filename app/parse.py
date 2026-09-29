@@ -81,7 +81,9 @@ class TopicsParser(CountParser):
         for found in element.select(self.selector):
             match = re.search(r"\d+", found.text)
             if match is None:
-                raise ValueError(f"No number in '{found.text}' for {self.selector}")
+                raise ValueError(
+                    f"No number in '{found.text}' for {self.selector}"
+                )
             total += int(match.group())
         return total
 
