@@ -1,4 +1,3 @@
-import re
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
 from typing import TypeVar, Generic
@@ -45,13 +44,9 @@ class TextParser(FieldParser[str], ABC):
         return self.get_text(element)
 
 
-class CountParser(FieldParser[int], ABC):
+class ElementsCountParser(FieldParser[int], ABC):
     def parse(self, element: Tag) -> int:
-        text = self.get_text(element)
-        match = re.search(r"\d+", text)
-        if match is None:
-            raise ValueError(f"No number in '{text}' for {self.selector}")
-        return int(match.group())
+        return len(element.select(self.selector))
 
 
 class NameParser(TextParser):
@@ -66,26 +61,12 @@ class DurationParser(TextParser):
     selector = "[class*='ProfessionCard_duration']"
 
 
-class ModulesParser(CountParser):
-    selector = "[class*='CourseModulesList_topicsCount']"
-
-    def parse(self, element: Tag) -> int:
-        return len(element.select(self.selector))
+class ModulesCountParser(ElementsCountParser):
+    selector = "[class*='CourseModulesList_topicsList']"
 
 
-class TopicsParser(CountParser):
-    selector = "[class*='CourseModulesList_topicsCount']"
-
-    def parse(self, element: Tag) -> int:
-        total = 0
-        for found in element.select(self.selector):
-            match = re.search(r"\d+", found.text)
-            if match is None:
-                raise ValueError(
-                    f"No number in '{found.text}' for {self.selector}"
-                )
-            total += int(match.group())
-        return total
+class TopicsCountParser(ElementsCountParser):
+    selector = "[class*='CourseModulesList_topicItem']"
 
 
 def fetch_soup(url: str) -> BeautifulSoup:
@@ -105,8 +86,8 @@ class CourseParser:
         self.name_parser = NameParser()
         self.description_parser = ShortDescriptionParser()
         self.duration_parser = DurationParser()
-        self.modules_parser = ModulesParser()
-        self.topics_parser = TopicsParser()
+        self.modules_parser = ModulesCountParser()
+        self.topics_parser = TopicsCountParser()
 
     def parse(self, card: Tag) -> Course:
         detail_soup = fetch_soup(get_detail_url(card))
